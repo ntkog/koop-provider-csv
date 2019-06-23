@@ -1,8 +1,9 @@
 {
   "koop-provider-csv": {
     "sources": {
-      "my-data": {
+      "my_data": {
         "url": "",
+        "separator" : ",",
         "metadata": {
           "name": "",
           "description": "",
@@ -14,5 +15,6 @@
         }
       }
     }
-  }
+  },
+  "port" : 8000
 }

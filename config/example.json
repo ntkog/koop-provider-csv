@@ -1,18 +1,20 @@
 {
   "koop-provider-csv": {
     "sources": {
-      "my-data": {
-        "url": "http://my-data.csv",
+      "m30": {
+        "url": "csvs/m30.csv",
+        "delimiter" : ",",
         "metadata": {
-          "name": "My Data",
-          "description": "data description",
-          "idField": "object_id"
+          "name": "Cámaras M-30",
+          "description": "Todas las cámaras de la M-30",
+          "idField": "id"
         },
         "geometryColumns": {
-          "latitude": "x",
-          "longitude": "y"
+          "latitude": "latitud",
+          "longitude": "longitud"
         }
       }
     }
-  }
+  },
+  "port" : 8000
 }

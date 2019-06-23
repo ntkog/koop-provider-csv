@@ -8,62 +8,88 @@
 
 const koopConfig = require("config");
 const fs = require("fs");
-const CsvReadableStream = require("csv-reader");
-const AutoDetectDecoderStream = require("autodetect-decoder-stream");
 const fetch = require("node-fetch");
-const isUrl = require("is-url-superb");
-const translate = require("./utils/translate-csv");
+const {chain}  = require("stream-chain");
+const {parser} = require("stream-csv-as-json");
+const {asObjects} = require("stream-csv-as-json/AsObjects");
+const {streamValues} = require("stream-json/streamers/StreamValues");
+// It won't chain, so it not has to be read on each getData call
+const CONFIG = koopConfig["koop-provider-csv"];
+const GEOJSON_TEMPLATE = {
+  type: "FeatureCollection",
+  features: [],
+  metadata : null
+}
+const FEATURE_TEMPLATE = {
+  type: "Feature",
+  properties: {},
+  geometry: {
+    type: "Point",
+    coordinates: []
+  }
+};
 
 function Model(koop) {}
+
+function isUrl (str) {
+  return /^http[s]?:\/\//.test(str);
+}
+
 
 // Public function to return data from the
 // Return: GeoJSON FeatureCollection
 Model.prototype.getData = async function(req, callback) {
-  const config = koopConfig["koop-provider-csv"];
-  const sourceId = req.params.id;
-  const sourceConfig = config.sources[sourceId];
+  var features = [];
 
-  const csv = [];
-  let readStream;
+  const sourceConfig = CONFIG.sources[req.params.id];
+  const csvOrigin = sourceConfig.url;
+  let pipeline = chain([
+    parser({ separator: sourceConfig.delimiter || ","}),
+    asObjects(),
+    streamValues(),
+    data => {
+      let lat = parseFloat(data.value[sourceConfig.geometryColumns.latitude]);
+      let lon = parseFloat(data.value[sourceConfig.geometryColumns.longitude]);
+      let properties = {...data.value};
+      delete properties[sourceConfig.geometryColumns.latitude];
+      delete properties[sourceConfig.geometryColumns.longitude];
+      return {
+        ...FEATURE_TEMPLATE,
+        geometry : {
+          type : "Point",
+          coordinates : [lon,lat]
+        },
+        properties: {
+          ...properties,
+          id : sourceConfig.metadata.hasOwnProperty("idField")
+            ? parseInt(data.value[sourceConfig.metadata.idField])
+            : data.key+1
+        }
+      };
+    }
+  ])
 
-  if (isUrl(sourceConfig.url)) {
-    // this is a network URL
-    const res = await fetch(sourceConfig.url);
-    readStream = res.body;
-  } else if (sourceConfig.url.toLowerCase().endsWith(".csv")) {
-    // this is a file path
-    readStream = fs.createReadStream(sourceConfig.url, "utf8");
-  } else {
-    callback(new Error(`Unrecognized CSV source ${sourceConfig.url}`));
-    return;
-  }
+  pipeline
+    .on("data", (data) => {
+      features.push(data);
+    })
+    .on("error", (err) => {
+      console.error(err)
+      callback(err);
+    })
+    .on("end", () => {
+      callback(null, {
+        ...GEOJSON_TEMPLATE,
+        features : features,
+        metadata : sourceConfig.metadata
+      });
+    });
 
-  readStream
-    .pipe(new AutoDetectDecoderStream())
-    .pipe(
-      CsvReadableStream({
-        trim: true,
-        parseNumbers: true,
-        parseBooleans: true,
-        delimiter: sourceConfig.delimiter || ","
-      })
-    )
-    .on(
-      "data",
-      row => {
-        csv.push(row);
-      },
-      callback
-    )
-    .on(
-      "end",
-      () => {
-        const geojson = translate(csv, sourceConfig);
-        callback(null, geojson);
-      },
-      callback
-    )
-    .on("error", callback);
+  let startStream = isUrl(csvOrigin)
+      ? await fetch(csvOrigin).then(res => res)
+      : fs.createReadStream(`${process.cwd()}/${csvOrigin}`);
+  startStream.pipe(pipeline);
+
 };
 
 module.exports = Model;

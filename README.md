@@ -1,30 +1,27 @@
-# koop-provider-csv
+# koop-provider-csv-ntkog
 
-[![npm](https://img.shields.io/npm/v/koop-provider-csv.svg)](https://www.npmjs.com/package/koop-provider-csv) [![Build Status](https://travis-ci.org/haoliangyu/koop-provider-csv.svg?branch=master)](https://travis-ci.org/haoliangyu/koop-provider-csv)
 
-A configurable and reusable [CSV](https://en.wikipedia.org/wiki/Comma-separated_values) provider for [Koop](http://koopjs.github.io/), created with [Koop CLI](https://github.com/koopjs/koop-cli)
 
-This provider can load a CSV file from a local path or a remote endpoint. The provided CSV file must include columns of latitude and longitude coordinates.
+## Additional Features
 
-## Features
+- Better support for NodeJS streams
+- Improved Performance
+- proper handling of base filepath (from **process.cwd()**) for local files
+- proper parsing for geographic fields (**csv-reader** fails in some cases)
+- Refactored
 
-- fully configurable
-- support multiple CSV sources
-- support local file path or remote endpoint
-- parse boolean and numeric values automatically
-- stream processing
 
 ## Installation
 
 with npm
 
 ```bash
-npm install koop-provider-csv
+npm install ntkog/koop-provider-csv
 ```
 
 with [Koop CLI](https://github.com/koopjs/koop-cli) for your Koop app
 
-`bash koop add koop-provider-csv`
+`bash koop add koop-provider-csv-ntkog`
 
 ## Usage
 
@@ -56,7 +53,8 @@ A configuration looks like this:
     "sources": {
       // a unique ID for each source, which is used in the query route
       "my-data": {
-        // [required] a file path or a URL for the source CSV
+        // [required] a file path or a URL for the source CSV.
+        // Path is relative to process.cwd() .
         "url": "path_to_csv",
         // [required] point coordinate columns
         "geometryColumns": {
