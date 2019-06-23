@@ -3,7 +3,7 @@
     "sources": {
       "my_data": {
         "url": "",
-        "separator" : ",",
+        "delimiter" : ",",
         "metadata": {
           "name": "",
           "description": "",
